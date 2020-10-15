@@ -41,13 +41,19 @@ def drawLine2P(x,y,xlims):
 # In[3]:
 
 
-def PlotTimeSeries(ticker, years_ago=5):#, months_ago=0):
+def PlotTimeSeries(ticker, years_ago=5, verbose_mode=False):#, months_ago=0):
     """Returns monthly Price Chart and iterated Support/Resistance Lines for input stock ticker.
 
         Parameters:
-            ticker: Stock ticker to be charted, must conform to Yahoo Finance format
+            ticker: string
+                    Stock ticker to be charted, must conform to Yahoo Finance format
                     e.g., RY.TO, QAN.AX
-            years_ago: Number of years of stock price history to chart"""    
+            years_ago: integer, default 5
+                    Number of years of stock price history to chart
+            verbose_mode: bool, default False
+                    Calls out Breach points
+                    Good for additional analysis or testing
+    """    
     try:
         closeHist = pd.DataFrame(yf.download(ticker,
                                              period='max', 
@@ -138,6 +144,8 @@ def PlotTimeSeries(ticker, years_ago=5):#, months_ago=0):
 
 
     Buy_Breach = max(closeHist[closeHist.x_index.isin(X2)].index)
+    if verbose_mode:
+        n = 1 #TESTING
     while Buy_Breach:
         # FIRST BUY ITERATION
         latestHist = closeHist.loc[Buy_Breach:]
@@ -146,6 +154,9 @@ def PlotTimeSeries(ticker, years_ago=5):#, months_ago=0):
             Sell_Breach = subSell[0]        
             preBreach = MaxSeries[MaxSeries.index < Sell_Breach].index
             postBreach = MaxSeries[MaxSeries.index > Sell_Breach].index
+            if verbose_mode:
+                print("{} Sell Breach at {}, this is Breach #{}".format(ticker, Sell_Breach, n)) #TESTING
+                n+=1
             if len(postBreach) > 0:
                 pt_1 = closeHist.loc[closeHist.loc[preBreach]['Price(Monthly avg.)'].idxmax()]
                 pt_2 = closeHist.loc[postBreach[0]]
@@ -171,6 +182,9 @@ def PlotTimeSeries(ticker, years_ago=5):#, months_ago=0):
                 Buy_Breach = superBuy[0]
                 preBreach = MinSeries[MinSeries.index < Buy_Breach].index
                 postBreach = MinSeries[MinSeries.index > Buy_Breach].index
+                if verbose_mode:
+                    print("{} Buy Breach at {}, this is Breach #{}".format(ticker, Buy_Breach, n)) #TESTING
+                    n+=1
                 if len(postBreach) > 0:
                     pt_1 = closeHist.loc[closeHist.loc[preBreach]['Price(Monthly avg.)'].idxmin()]
                     pt_2 = closeHist.loc[postBreach[0]]
@@ -257,15 +271,20 @@ def PlotTimeSeries(ticker, years_ago=5):#, months_ago=0):
 # In[4]:
 
 
-def Chart3PTL(tickerListing, years=5):
+def Chart3PTL(tickerListing, years=5, verbose_mode=False):
     """Returns monthly Price Chart and iterated Support/Resistance Lines for input LIST of stock tickers.
 
     Parameters:
         tickerListing: List of stock tickers to be charted, must conform to Yahoo Finance format
                 e.g., [RY.TO, QAN.AX]
-        years: Number of years of stock price history to chart"""  
+        years: integer, default 5
+                Number of years of stock price history to chart
+        verbose_mode: bool, default False
+                Calls out Breach points
+                Good for additional analysis or testing"""  
     List = tickerListing.split()
+    chatty = verbose_mode
     for i in List:
         print(i)
-        PlotTimeSeries(i, years)
+        PlotTimeSeries(i, years, verbose_mode=chatty)
 
