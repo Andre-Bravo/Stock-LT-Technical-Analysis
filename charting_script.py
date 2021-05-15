@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[5]:
 
 
 import pandas as pd
@@ -17,7 +17,7 @@ from pandas.plotting import register_matplotlib_converters
 register_matplotlib_converters()
 
 
-# In[2]:
+# In[1]:
 
 
 def drawLine2P(x,y,xlims):
@@ -38,7 +38,7 @@ def drawLine2P(x,y,xlims):
     return [xrange, k*xrange + b]
 
 
-# In[3]:
+# In[62]:
 
 
 def PlotTimeSeries(ticker, years_ago=5, verbose_mode=False):#, months_ago=0):
@@ -54,6 +54,9 @@ def PlotTimeSeries(ticker, years_ago=5, verbose_mode=False):#, months_ago=0):
                     Calls out Breach points
                     Good for additional analysis or testing
     """    
+    
+    # There are two Yahoo Modules we can use to pull our data (closeHist)
+    # We'll pull from one and if we get an error will use the alternate
     try:
         closeHist = pd.DataFrame(yf.download(ticker,
                                              period='max', 
@@ -65,15 +68,19 @@ def PlotTimeSeries(ticker, years_ago=5, verbose_mode=False):#, months_ago=0):
         closeHist = pd.DataFrame(y_fin.get_data(ticker)['close']).rename({'close':'Price'}, axis=1)
         closeHist.index = closeHist.index.to_pydatetime()
         closeHist.index.name = 'Date'
+    # Trim our data to years_ago
     closeHist = closeHist[closeHist.index > dt.datetime.now() + relativedelta(years=-years_ago)]
     closeHist.reset_index(inplace=True)
+    #Calculate monthly avg. Price
     closeHist['Month'] = closeHist.Date.apply(lambda x: dt.date(x.year, x.month, 1))
     closeHist = closeHist.groupby('Month').last().rename({'Price':'Price(Monthly avg.)'}, axis=1)
     closeHist['x_index'] = pd.Series(range(len(closeHist.index)), closeHist.index)
 
-    # Find Peaks and Troughs 
-    MinSeries = closeHist['Price(Monthly avg.)'][(closeHist['Price(Monthly avg.)'].shift(1) > closeHist['Price(Monthly avg.)']) & (closeHist['Price(Monthly avg.)'].shift(-1) > closeHist['Price(Monthly avg.)'])]
-    MaxSeries = closeHist['Price(Monthly avg.)'][(closeHist['Price(Monthly avg.)'].shift(1) < closeHist['Price(Monthly avg.)']) & (closeHist['Price(Monthly avg.)'].shift(-1) < closeHist['Price(Monthly avg.)'])]
+    # Find Peaks and Troughs (Local Maximums and Minimums)
+    MinSeries = closeHist['Price(Monthly avg.)'][(closeHist['Price(Monthly avg.)'].shift(1) > closeHist['Price(Monthly avg.)']) &  
+                                                 (closeHist['Price(Monthly avg.)'].shift(-1) > closeHist['Price(Monthly avg.)'])]
+    MaxSeries = closeHist['Price(Monthly avg.)'][(closeHist['Price(Monthly avg.)'].shift(1) < closeHist['Price(Monthly avg.)']) &  
+                                                 (closeHist['Price(Monthly avg.)'].shift(-1) < closeHist['Price(Monthly avg.)'])]
     
     
     MinSeries = pd.concat([MinSeries, 
@@ -225,17 +232,17 @@ def PlotTimeSeries(ticker, years_ago=5, verbose_mode=False):#, months_ago=0):
     plt.figure(figsize=[20,9])
     with plt.style.context('fivethirtyeight'):
         plt.plot(closeHist['Price(Monthly avg.)'], zorder=0)
+        
+        if verbose_mode:
+            for i in np.arange(len(sellLine_list)):
+                plt.plot(closeHist.index, sellLine_list[i],
+                         c='r', linestyle='dashed', 
+                         alpha=sellLine_alpha[i])
 
-
-        for i in np.arange(len(sellLine_list)):
-            plt.plot(closeHist.index, sellLine_list[i],
-                     c='r', linestyle='dashed', 
-                     alpha=sellLine_alpha[i])
-
-        for i in np.arange(len(buyLine_list)):
-            plt.plot(closeHist.index, buyLine_list[i],
-                     c='g', linestyle='dashed', 
-                     alpha=buyLine_alpha[i])
+            for i in np.arange(len(buyLine_list)):
+                plt.plot(closeHist.index, buyLine_list[i],
+                         c='g', linestyle='dashed', 
+                         alpha=buyLine_alpha[i])
 
         if len(sellLine_list) > 0:
             plt.plot(closeHist.index, sellLine_list[-1],
@@ -259,6 +266,7 @@ def PlotTimeSeries(ticker, years_ago=5, verbose_mode=False):#, months_ago=0):
     #    plt.scatter(MinMinSeries.index, 
     #                MinMinSeries,
     #                c='y', s=100, zorder=5)
+    plt.title("Buy and Sell Lines for "+ ticker, {'fontsize':20})
     plt.autoscale()
     num = closeHist['Price(Monthly avg.)'].min()
     Y_lim_min = math.floor(num / 10 ** math.floor(math.log10(num))) * 10 ** math.floor(math.log10(num))
@@ -268,7 +276,7 @@ def PlotTimeSeries(ticker, years_ago=5, verbose_mode=False):#, months_ago=0):
     plt.show()
 
 
-# In[4]:
+# In[63]:
 
 
 def Chart3PTL(tickerListing, years=5, verbose_mode=False):
